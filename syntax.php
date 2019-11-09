@@ -45,7 +45,9 @@ class syntax_plugin_addnewpage extends DokuWiki_Syntax_Plugin {
      *
      * Handled syntax options:
      *   {{NEWPAGE}}
+	 *   {{NEWPAGE|Title}}
      *   {{NEWPAGE>your:namespace}}
+     *   {{NEWPAGE|Title>your:namespace}}
      *   {{NEWPAGE#newtpl1,newtpl2}}
      *   {{NEWPAGE#newtpl1|Title1,newtpl2|Title1}}
      *   {{NEWPAGE>your:namespace#newtpl1|Title1,newtpl2|Title1}}
@@ -59,15 +61,31 @@ class syntax_plugin_addnewpage extends DokuWiki_Syntax_Plugin {
      */
     public function handle($match, $state, $pos, Doku_Handler $handler) {
         /* @codingStandardsIgnoreEnd */
-        $options = substr($match, 9, -2); // strip markup
-        $options = explode('#', $options, 2);
 
-        $namespace = trim(ltrim($options[0], '>'));
+		$pos = strpos($match, '>');
+		if ($pos === false) {
+			$options = substr($match, 9, -2);
+			$title ="";
+		} else {
+			$tag_options = explode('>', substr($match, 2, -2), 2);  # (NEWPAGE|Title) , (your:namespace#newtpl1|Title1,newtpl2|Title1)
+			$tag 	 = $tag_options[0];                 # (NEWPAGE|Title)
+			$options = $tag_options[1];                 # (your:namespace#newtpl1|Title1,newtpl2|Title1)
+			$tag_title = explode("|" ,$tag , 2);        # (NEWPAGE) , (Title)
+			$title = trim($tag_title[1]);               # (Title) 
+		}
+		
+		$options = explode('#', $options, 2);       # (your:namespace) , (newtpl1|Title1,newtpl2|Title1)
+        $namespace = trim(ltrim($options[0], '>')); # (your:namespace)
+        
+		if (empty($title)) { $title = $this->getLang('okbutton'); }
+
         $templates = explode(',', $options[1]);
         $templates = array_map('trim', $templates);
+		
         return array(
             'namespace' => $namespace,
-            'newpagetemplates' => $templates
+            'newpagetemplates' => $templates,
+            'buttontitle' => $title
         );
     }
 
@@ -104,7 +122,7 @@ class syntax_plugin_addnewpage extends DokuWiki_Syntax_Plugin {
                 . $newpagetemplateinput
                 . DOKU_TAB . DOKU_TAB . '<input type="hidden" name="do" value="edit" />' . DOKU_LF
                 . DOKU_TAB . DOKU_TAB . '<input type="hidden" name="id" />' . DOKU_LF
-                . DOKU_TAB . DOKU_TAB . '<input class="button" type="submit" value="' . $this->getLang('okbutton') . '" tabindex="4" />' . DOKU_LF
+                . DOKU_TAB . DOKU_TAB . '<input class="button" type="submit" value="' . $data['buttontitle'] . '" tabindex="4" />' . DOKU_LF
                 . DOKU_TAB . '</form>' . DOKU_LF
                 . '</div>';
             $renderer->doc .= $form;
